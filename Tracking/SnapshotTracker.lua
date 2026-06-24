@@ -16,8 +16,6 @@ local GetLocale = GetLocale
 local playerClass = nil
 local playerGUID = nil
 local snapshots = {}        -- [destGUID][spellName] = { damageMod, critChance }
-local masterPoisoners = {}  -- [rogueGUID] = expirationTime
-local MASTER_POISONER_WINDOW = 3
 local recentDirectDotCasts = {} -- [destGUID][dotSpellId] = expiryTime
 local DIRECT_CAST_WINDOW = 2
 
@@ -42,7 +40,6 @@ end
 
 -- Aliases for data tables defined in SnapshotData.lua (still needed here)
 local TARGET_UNIT             = SnapshotTracker._TARGET_UNIT
-local masterPoisonerWhitelist = SnapshotTracker._masterPoisonerWhitelist
 local noRecalcOnRefresh       = SnapshotTracker._noRecalcOnRefresh
 local indirectApplicators     = SnapshotTracker._indirectApplicators
 
@@ -67,7 +64,7 @@ end
 
 function SnapshotTracker:GetCritChance()
     local SC = ns.AuraTracker.SnapshotCalc
-    return SC.CalcCritChance(playerClass, masterPoisoners)
+    return SC.CalcCritChance(playerClass)
 end
 
 function SnapshotTracker:GetCritDamage()
@@ -119,11 +116,7 @@ function SnapshotTracker:ProcessEvent(subEvent, sourceGUID, destGUID, spellId, s
         return
     end
 
-    -- Master Poisoner: track Mutilate casts from any player
     if subEvent == "SPELL_CAST_SUCCESS" then
-        if masterPoisonerWhitelist[spellId] then
-            masterPoisoners[sourceGUID] = GetTime() + MASTER_POISONER_WINDOW
-        end
         -- Track direct casts of noRecalcOnRefresh DoTs so we can
         -- distinguish manual recasts from talent/glyph refreshes.
         if sourceGUID == playerGUID and destGUID then
