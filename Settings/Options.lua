@@ -1,19 +1,19 @@
 local addonName, ns = ...
 
 local function GetOptions()
-    local AuraTracker = ns.AuraTracker.Controller
+    local SnapshotTracker = ns.SnapshotTracker.Controller
     local options = {
-        name = "AuraTracker Snapshot",
-        handler = AuraTracker,
+        name = "SnapshotTracker Snapshot",
+        handler = SnapshotTracker,
         type = "group",
         args = {
             testMode = {
                 name = "Test Mode (Show all frames)",
                 type = "toggle",
                 order = 1,
-                get = function() return AuraTracker.testMode end,
+                get = function() return SnapshotTracker.testMode end,
                 set = function(_, val)
-                    AuraTracker.testMode = val
+                    SnapshotTracker.testMode = val
                 end,
             },
             trackers = {
@@ -26,7 +26,7 @@ local function GetOptions()
                         type = "execute",
                         order = 1,
                         func = function()
-                            AuraTracker:CreateNewTracker()
+                            SnapshotTracker:CreateNewTracker()
                         end,
                     },
                 },
@@ -34,7 +34,7 @@ local function GetOptions()
         },
     }
 
-    local db = AuraTracker.db.profile
+    local db = SnapshotTracker.db.profile
     for id, config in pairs(db.trackers) do
         options.args.trackers.args["tracker" .. id] = {
             name = config.spellName ~= "" and config.spellName or ("Tracker " .. id),
@@ -48,7 +48,7 @@ local function GetOptions()
                     get = function() return config.enabled end,
                     set = function(_, val)
                         config.enabled = val
-                        AuraTracker:UpdateTracker(id)
+                        SnapshotTracker:UpdateTracker(id)
                     end,
                 },
                 spellName = {
@@ -58,7 +58,18 @@ local function GetOptions()
                     get = function() return config.spellName end,
                     set = function(_, val)
                         config.spellName = val
-                        AuraTracker:UpdateTracker(id)
+                        SnapshotTracker:UpdateTracker(id)
+                    end,
+                },
+                globalName = {
+                    name = "Global Frame Name",
+                    type = "input",
+                    order = 3,
+                    desc = "Requires /reload to apply if the frame was already created.",
+                    get = function() return config.globalName end,
+                    set = function(_, val)
+                        config.globalName = val
+                        SnapshotTracker:UpdateTracker(id)
                     end,
                 },
                 delete = {
@@ -66,7 +77,7 @@ local function GetOptions()
                     type = "execute",
                     order = 3,
                     func = function()
-                        AuraTracker:DeleteTracker(id)
+                        SnapshotTracker:DeleteTracker(id)
                     end,
                 },
                 visuals = {
@@ -81,7 +92,7 @@ local function GetOptions()
                             get = function() return config.size end,
                             set = function(_, val)
                                 config.size = val
-                                AuraTracker:UpdateTracker(id)
+                                SnapshotTracker:UpdateTracker(id)
                             end,
                         },
                         fontSize = {
@@ -91,7 +102,7 @@ local function GetOptions()
                             get = function() return config.fontSize end,
                             set = function(_, val)
                                 config.fontSize = val
-                                AuraTracker:UpdateTracker(id)
+                                SnapshotTracker:UpdateTracker(id)
                             end,
                         },
                         bgColor = {
@@ -104,7 +115,7 @@ local function GetOptions()
                             end,
                             set = function(_, r, g, b, a)
                                 config.bgColor = {r = r, g = g, b = b, a = a}
-                                AuraTracker:UpdateTracker(id)
+                                SnapshotTracker:UpdateTracker(id)
                             end,
                         },
                     },
@@ -120,7 +131,7 @@ local function GetOptions()
                             get = function() return config.parent end,
                             set = function(_, val)
                                 config.parent = val
-                                AuraTracker:UpdateTracker(id)
+                                SnapshotTracker:UpdateTracker(id)
                             end,
                         },
                         point = {
@@ -134,7 +145,7 @@ local function GetOptions()
                             get = function() return config.point end,
                             set = function(_, val)
                                 config.point = val
-                                AuraTracker:UpdateTracker(id)
+                                SnapshotTracker:UpdateTracker(id)
                             end,
                         },
                         relPoint = {
@@ -148,7 +159,7 @@ local function GetOptions()
                             get = function() return config.relPoint end,
                             set = function(_, val)
                                 config.relPoint = val
-                                AuraTracker:UpdateTracker(id)
+                                SnapshotTracker:UpdateTracker(id)
                             end,
                         },
                         x = {
@@ -158,7 +169,7 @@ local function GetOptions()
                             get = function() return config.x end,
                             set = function(_, val)
                                 config.x = val
-                                AuraTracker:UpdateTracker(id)
+                                SnapshotTracker:UpdateTracker(id)
                             end,
                         },
                         y = {
@@ -168,7 +179,7 @@ local function GetOptions()
                             get = function() return config.y end,
                             set = function(_, val)
                                 config.y = val
-                                AuraTracker:UpdateTracker(id)
+                                SnapshotTracker:UpdateTracker(id)
                             end,
                         },
                     },

@@ -1,11 +1,11 @@
 local _, ns = ...
-ns.AuraTracker = ns.AuraTracker or {}
+ns.SnapshotTracker = ns.SnapshotTracker or {}
 
 -- Pure calculation functions for snapshot damage/crit modifiers.
 -- These functions read WoW API state and return values without mutating
 -- any module-level variables.  SnapshotTracker.lua uses them as delegates.
 
-local SnapshotTracker = ns.AuraTracker.SnapshotTracker
+local SnapshotTracker = ns.SnapshotTracker.SnapshotTracker
 
 -- Localize frequently-used globals
 local pairs, ipairs, select, type = pairs, ipairs, select, type
@@ -51,7 +51,7 @@ local trackingSpells                           = SnapshotTracker._trackingSpells
 local DelocalizeTracking                       = SnapshotTracker._DelocalizeTracking
 
 local SnapshotCalc = {}
-ns.AuraTracker.SnapshotCalc = SnapshotCalc
+ns.SnapshotTracker.SnapshotCalc = SnapshotCalc
 
 -- ==========================================================
 -- CALCULATION: CRIT CHANCE
