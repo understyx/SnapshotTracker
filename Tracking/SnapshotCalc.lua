@@ -26,8 +26,8 @@ local GetInventoryItemLink = GetInventoryItemLink
 local INVSLOT_HEAD = INVSLOT_HEAD
 
 -- Minimap tracking API (C_Minimap in Classic, global in original WotLK)
-local GetNumTrackingTypes = C_Minimap and C_Minimap.GetNumTrackingTypes or GetNumTrackingTypes
-local GetTrackingInfo = C_Minimap and C_Minimap.GetTrackingInfo or GetTrackingInfo
+local GetNumTrackingTypes = (C_Minimap and C_Minimap.GetNumTrackingTypes) or _G.GetNumTrackingTypes
+local GetTrackingInfo = (C_Minimap and C_Minimap.GetTrackingInfo) or _G.GetTrackingInfo
 
 -- Data table aliases (populated by SnapshotData.lua, which loads first)
 local TARGET_UNIT                              = SnapshotTracker._TARGET_UNIT

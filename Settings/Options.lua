@@ -1,16 +1,25 @@
 local addonName, ns = ...
-local AuraTracker = ns.AuraTracker.Controller
 
 local function GetOptions()
+    local AuraTracker = ns.AuraTracker.Controller
     local options = {
         name = "AuraTracker Snapshot",
         handler = AuraTracker,
         type = "group",
         args = {
+            testMode = {
+                name = "Test Mode (Show all frames)",
+                type = "toggle",
+                order = 1,
+                get = function() return AuraTracker.testMode end,
+                set = function(_, val)
+                    AuraTracker.testMode = val
+                end,
+            },
             trackers = {
                 name = "Trackers",
                 type = "group",
-                order = 1,
+                order = 2,
                 args = {
                     add = {
                         name = "Add Tracker",
@@ -65,6 +74,16 @@ local function GetOptions()
                     type = "group",
                     order = 10,
                     args = {
+                        size = {
+                            name = "Frame Size",
+                            type = "range",
+                            min = 10, max = 200, step = 1,
+                            get = function() return config.size end,
+                            set = function(_, val)
+                                config.size = val
+                                AuraTracker:UpdateTracker(id)
+                            end,
+                        },
                         fontSize = {
                             name = "Font Size",
                             type = "range",

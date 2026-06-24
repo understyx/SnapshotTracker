@@ -20,7 +20,10 @@ function AuraTracker:OnInitialize()
         }
     }
     self.db = LibStub("AceDB-3.0"):New("SimpleAuraTrackerDB", defaults, true)
+
     self.activeTrackers = {}
+    self.framePool = {} -- [id] = frame
+    self.testMode = false
 
     -- Register configuration options
     LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, function()
@@ -28,8 +31,7 @@ function AuraTracker:OnInitialize()
     end)
     LibStub("AceConfigDialog-3.0"):AddToBlizOptions(addonName, "Aura Tracker")
 
-    self:RegisterChatCommand("auratracker", "OnSlashCommand")
-    self:RegisterChatCommand("at", "OnSlashCommand")
+    self:RegisterChatCommand("sst", "OnSlashCommand")
 end
 
 function AuraTracker:OnEnable()
@@ -57,6 +59,7 @@ function AuraTracker:CreateNewTracker()
     db.trackers[id] = {
         enabled = true,
         spellName = "",
+        size = 40,
         fontSize = 12,
         bgColor = {r = 0, g = 0, b = 0, a = 0.5},
         parent = "UIParent",
@@ -67,13 +70,12 @@ function AuraTracker:CreateNewTracker()
     }
 
     self:UpdateTracker(id)
-    -- Refresh options UI
     LibStub("AceConfigRegistry-3.0"):NotifyChange(addonName)
 end
 
 function AuraTracker:DeleteTracker(id)
     if self.activeTrackers[id] then
-        self.activeTrackers[id]:Destroy()
+        self.activeTrackers[id]:Hide()
         self.activeTrackers[id] = nil
     end
     self.db.profile.trackers[id] = nil
@@ -85,19 +87,23 @@ function AuraTracker:UpdateTracker(id)
     if not config then return end
 
     if not self.activeTrackers[id] then
-        self.activeTrackers[id] = SnapshotFrame:New(id, config)
-    else
-        self.activeTrackers[id].config = config
-        self.activeTrackers[id]:ApplyConfig()
+        local frame = self.framePool[id]
+        local tracker = SnapshotFrame:New(id, frame)
+        self.framePool[id] = tracker.frame
+        self.activeTrackers[id] = tracker
     end
+
+    self.activeTrackers[id]:ApplyConfig(config)
 end
 
 function AuraTracker:RebuildAllTrackers()
+    -- Hide all existing active trackers
     for id, tracker in pairs(self.activeTrackers) do
-        tracker:Destroy()
+        tracker:Hide()
     end
     self.activeTrackers = {}
 
+    -- Re-initialize trackers from DB, reusing frames from pool
     for id, config in pairs(self.db.profile.trackers) do
         self:UpdateTracker(id)
     end
@@ -127,6 +133,8 @@ function AuraTracker:OnPlayerEnteringWorld()
 end
 
 function AuraTracker:OnSlashCommand(input)
+    -- In 3.3.5, InterfaceOptionsFrame_OpenToCategory might not be enough to
+    -- jump to the specific sub-category if it's the first time opening.
     InterfaceOptionsFrame_OpenToCategory("Aura Tracker")
-    InterfaceOptionsFrame_OpenToCategory("Aura Tracker") -- Twice because WoW
+    InterfaceOptionsFrame_OpenToCategory("Aura Tracker")
 end

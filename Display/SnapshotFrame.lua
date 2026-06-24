@@ -7,32 +7,32 @@ ns.AuraTracker.SnapshotFrame = SnapshotFrame
 
 local SnapshotTracker = nil
 
-function SnapshotFrame:New(id, config)
+function SnapshotFrame:New(id, frame)
     local self = setmetatable({}, SnapshotFrame)
     self.id = id
-    self.config = config
 
-    local f = CreateFrame("Frame", "AuraTracker_Snapshot_" .. id, UIParent)
-    self.frame = f
+    if not frame then
+        frame = CreateFrame("Frame", "AuraTracker_Snapshot_" .. id, UIParent)
+        frame.bg = frame:CreateTexture(nil, "BACKGROUND")
+        frame.bg:SetTexture("Interface\\Buttons\\WHITE8X8")
+        frame.bg:SetAllPoints()
 
-    f.bg = f:CreateTexture(nil, "BACKGROUND")
-    f.bg:SetAllPoints()
+        frame.text = frame:CreateFontString(nil, "OVERLAY")
+        frame.text:SetPoint("CENTER")
+    end
 
-    f.text = f:CreateFontString(nil, "OVERLAY")
-    f.text:SetPoint("CENTER")
-
-    self:ApplyConfig()
+    self.frame = frame
     return self
 end
 
-function SnapshotFrame:ApplyConfig()
-    local config = self.config
+function SnapshotFrame:ApplyConfig(config)
+    self.config = config
     local f = self.frame
 
     f:SetSize(config.size or 40, config.size or 40)
 
     local color = config.bgColor or {r = 0, g = 0, b = 0, a = 0.5}
-    f.bg:SetTexture(color.r, color.g, color.b, color.a)
+    f.bg:SetVertexColor(color.r, color.g, color.b, color.a or 1)
 
     local fontSize = config.fontSize or 12
     f.text:SetFont([[Fonts\FRIZQT__.ttf]], fontSize, "THICKOUTLINE")
@@ -48,8 +48,13 @@ function SnapshotFrame:ApplyConfig()
     end
 end
 
-function SnapshotFrame:Update()
+function SnapshotFrame:Update(testMode)
     if not self.config.enabled then return end
+
+    if testMode then
+        self.frame.text:SetText("10.5%")
+        return
+    end
 
     if not SnapshotTracker then
         SnapshotTracker = ns.AuraTracker.SnapshotTracker
@@ -61,14 +66,11 @@ function SnapshotFrame:Update()
         return
     end
 
-    -- We track the snapshot on the target by default as per requirement
+    -- We track the snapshot on the target by default
     local diffText = SnapshotTracker:GetSnapshotDiff("target", spellName)
     if diffText then
         self.frame.text:SetText(diffText)
     else
-        -- If no snapshot or no diff, maybe show nothing or 0%
-        -- The requirement says "tracking snapshot strength",
-        -- usually we want to see it when it's active.
         if SnapshotTracker:HasSnapshot("target", spellName) then
             self.frame.text:SetText("0%")
         else
@@ -77,7 +79,6 @@ function SnapshotFrame:Update()
     end
 end
 
-function SnapshotFrame:Destroy()
+function SnapshotFrame:Hide()
     self.frame:Hide()
-    self.frame:SetParent(nil)
 end

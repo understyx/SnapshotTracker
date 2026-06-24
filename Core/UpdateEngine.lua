@@ -32,7 +32,8 @@ end
 
 function UpdateEngine:UpdateAllTrackers()
     local controller = self.controller
+    local testMode = controller.testMode
     for id, tracker in pairs(controller.activeTrackers) do
-        tracker:Update()
+        tracker:Update(testMode)
     end
 end
