@@ -1,18 +1,21 @@
 local _, ns = ...
-ns.AuraTracker = ns.AuraTracker or {}
+ns.SnapshotTracker = ns.SnapshotTracker or {}
 
 local SnapshotFrame = {}
 SnapshotFrame.__index = SnapshotFrame
-ns.AuraTracker.SnapshotFrame = SnapshotFrame
+ns.SnapshotTracker.SnapshotFrame = SnapshotFrame
 
 local SnapshotTracker = nil
 
-function SnapshotFrame:New(id, frame)
+function SnapshotFrame:New(id, frame, config)
     local self = setmetatable({}, SnapshotFrame)
     self.id = id
 
     if not frame then
-        frame = CreateFrame("Frame", "AuraTracker_Snapshot_" .. id, UIParent)
+        local frameName = (config and config.globalName and config.globalName ~= "")
+                          and config.globalName
+                          or ("SnapshotTracker_Snapshot_" .. id)
+        frame = CreateFrame("Frame", frameName, UIParent)
         frame.bg = frame:CreateTexture(nil, "BACKGROUND")
         frame.bg:SetTexture("Interface\\Buttons\\WHITE8X8")
         frame.bg:SetAllPoints()
@@ -57,7 +60,7 @@ function SnapshotFrame:Update(testMode)
     end
 
     if not SnapshotTracker then
-        SnapshotTracker = ns.AuraTracker.SnapshotTracker
+        SnapshotTracker = ns.SnapshotTracker.SnapshotTracker
     end
 
     local spellName = self.config.spellName

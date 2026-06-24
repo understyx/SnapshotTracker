@@ -1,7 +1,7 @@
 local _, ns = ...
-ns.AuraTracker = ns.AuraTracker or {}
+ns.SnapshotTracker = ns.SnapshotTracker or {}
 
-local SnapshotTracker = ns.AuraTracker.SnapshotTracker
+local SnapshotTracker = ns.SnapshotTracker.SnapshotTracker
 
 -- Localize frequently-used globals
 local pairs, ipairs, select, type = pairs, ipairs, select, type
@@ -63,22 +63,22 @@ end
 -- ==========================================================
 
 function SnapshotTracker:GetCritChance()
-    local SC = ns.AuraTracker.SnapshotCalc
+    local SC = ns.SnapshotTracker.SnapshotCalc
     return SC.CalcCritChance(playerClass)
 end
 
 function SnapshotTracker:GetCritDamage()
-    local SC = ns.AuraTracker.SnapshotCalc
+    local SC = ns.SnapshotTracker.SnapshotCalc
     return SC.CalcCritDamage(playerClass)
 end
 
 function SnapshotTracker:IsTrackingTarget()
-    local SC = ns.AuraTracker.SnapshotCalc
+    local SC = ns.SnapshotTracker.SnapshotCalc
     return SC.IsTrackingTarget()
 end
 
 function SnapshotTracker:GetDamageMod()
-    local SC = ns.AuraTracker.SnapshotCalc
+    local SC = ns.SnapshotTracker.SnapshotCalc
     return SC.CalcDamageMod(playerClass)
 end
 

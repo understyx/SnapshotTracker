@@ -1,8 +1,8 @@
 local _, ns = ...
-ns.AuraTracker = ns.AuraTracker or {}
+ns.SnapshotTracker = ns.SnapshotTracker or {}
 
 local UpdateEngine = {}
-ns.AuraTracker.UpdateEngine = UpdateEngine
+ns.SnapshotTracker.UpdateEngine = UpdateEngine
 
 function UpdateEngine:Init(controller)
     self.controller = controller

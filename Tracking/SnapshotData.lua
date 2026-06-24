@@ -1,9 +1,9 @@
 local _, ns = ...
-ns.AuraTracker = ns.AuraTracker or {}
+ns.SnapshotTracker = ns.SnapshotTracker or {}
 
 -- Create module here so data tables can reference it
 local SnapshotTracker = {}
-ns.AuraTracker.SnapshotTracker = SnapshotTracker
+ns.SnapshotTracker.SnapshotTracker = SnapshotTracker
 
 -- Localize globals needed by data tables
 local GetLocale = GetLocale
