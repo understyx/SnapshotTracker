@@ -1,27 +1,13 @@
 local addonName, ns = ...
 ns.AuraTracker = ns.AuraTracker or {}
 
-local DragDrop = ns.AuraTracker.DragDrop
 local UpdateEngine = ns.AuraTracker.UpdateEngine
 local SnapshotTracker = ns.AuraTracker.SnapshotTracker
-local Icon = ns.AuraTracker.Icon
-
--- Localize frequently-used globals
-local pairs = pairs
-local UnitGUID = UnitGUID
-local GetTime = GetTime
-local string_lower = string.lower
-local strtrim = strtrim
+local SnapshotFrame = ns.AuraTracker.SnapshotFrame
 
 -- Library references
-local LibFramePool = LibStub("LibFramePool-1.0")
-local LibEditmode  = LibStub("LibEditmode-1.0")
-
--- Create module via Ace3
 local AuraTracker = LibStub("AceAddon-3.0"):NewAddon("AuraTracker", "AceEvent-3.0", "AceConsole-3.0")
 ns.AuraTracker.Controller = AuraTracker
-
-local playerGUID = nil
 
 -- ==========================================================
 -- LIFECYCLE
@@ -30,213 +16,125 @@ local playerGUID = nil
 function AuraTracker:OnInitialize()
     local defaults = {
         profile = {
-            enabled = true,
-            bars = {},
-            customMappings = {},
+            trackers = {}
         }
     }
     self.db = LibStub("AceDB-3.0"):New("SimpleAuraTrackerDB", defaults, true)
 
-    self.bars = {}
-    self.items = {}
-    
-    playerGUID = UnitGUID("player")
-    
-    LibFramePool:CreatePool(Icon.POOL_KEY, Icon.CreateFrame)
+    self.activeTrackers = {}
+    self.framePool = {} -- [id] = frame
+    self.testMode = false
 
-    -- Register configuration options with AceConfig
+    -- Register configuration options
     LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, function()
-        local options = ns.GetAuraTrackerOptions()
-        ns.UpdateBarOptions(options)
-        return options
+        return ns.GetOptions()
     end)
     LibStub("AceConfigDialog-3.0"):AddToBlizOptions(addonName, "Aura Tracker")
 
-    -- Register slash commands
-    self:RegisterChatCommand("auratracker", "OnSlashCommand")
-    self:RegisterChatCommand("at", "OnSlashCommand")
+    self:RegisterChatCommand("sst", "OnSlashCommand")
 end
 
 function AuraTracker:OnEnable()
-    local db = self:GetDB()
-    if not db or not db.enabled then
-        self:Disable()
-        return
-    end
-
-    if not next(db.bars) then
-        self:CreateBar("auratracker")
-    end
-
-    -- Initialize extracted modules
-    DragDrop:Init(self, function(barKey)
-        local SP = ns.AuraTracker.SettingsPanel
-        if SP then SP:Show(barKey) end
-    end)
     UpdateEngine:Init(self)
     SnapshotTracker:Init(self)
 
-    self:RebuildAllBars()
+    self:RebuildAllTrackers()
     UpdateEngine:CreateUpdateFrame()
-    self:RegisterEvent("CHARACTER_POINTS_CHANGED", "OnTalentsChanged")
-    self:RegisterEvent("PLAYER_TALENT_UPDATE", "OnTalentsChanged")
-    self:RegisterEvent("SPELL_UPDATE_COOLDOWN", "OnSpellUpdateCooldown")
+
     self:RegisterEvent("UNIT_AURA", "OnUnitAura")
     self:RegisterEvent("PLAYER_TARGET_CHANGED", "OnTargetChanged")
     self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnPlayerEnteringWorld")
-    self:RegisterEvent("SPELLS_CHANGED", "OnSpellsChanged")
-    self:RegisterEvent("ACTIONBAR_SHOWGRID", "OnDragStart")
-    self:RegisterEvent("ACTIONBAR_HIDEGRID", "OnDragEnd")
     self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED", "OnCLEU")
-    self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED", "OnEquipmentChanged")
-    self:RegisterEvent("PLAYER_TOTEM_UPDATE", "OnTotemUpdate")
-
-    DragDrop:HookBuffButtons()
-    hooksecurefunc("AuraButton_Update", function(buttonName, index, filter)
-        DragDrop:HookAuraButtonByName(buttonName, index, filter)
-    end)
-    DragDrop:HookTooltipAuraDetection()
-    DragDrop:HookTempEnchantButtons()
-    DragDrop:HookPetActionButtons()
-
-end
-
-function AuraTracker:OnDisable()
-    DragDrop:HideDropZones()
-    self:DestroyAllBars()
-    UpdateEngine:StopUpdateFrame()
-    self:UnregisterAllEvents()
 end
 
 -- ==========================================================
--- DATABASE ACCESS
+-- TRACKER MANAGEMENT
 -- ==========================================================
 
-function AuraTracker:GetAllBars()
-    return self.bars
+function AuraTracker:CreateNewTracker()
+    local db = self.db.profile
+    local id = 1
+    while db.trackers[id] do id = id + 1 end
+
+    db.trackers[id] = {
+        enabled = true,
+        spellName = "",
+        size = 40,
+        fontSize = 12,
+        bgColor = {r = 0, g = 0, b = 0, a = 0.5},
+        parent = "UIParent",
+        point = "CENTER",
+        relPoint = "CENTER",
+        x = 0,
+        y = 0,
+    }
+
+    self:UpdateTracker(id)
+    LibStub("AceConfigRegistry-3.0"):NotifyChange(addonName)
 end
 
-function AuraTracker:GetDB()
-    return self.db.profile
+function AuraTracker:DeleteTracker(id)
+    if self.activeTrackers[id] then
+        self.activeTrackers[id]:Hide()
+        self.activeTrackers[id] = nil
+    end
+    self.db.profile.trackers[id] = nil
+    LibStub("AceConfigRegistry-3.0"):NotifyChange(addonName)
 end
 
-function AuraTracker:GetBarDB(barKey)
-    local db = self:GetDB()
-    return db and db.bars and db.bars[barKey]
+function AuraTracker:UpdateTracker(id)
+    local config = self.db.profile.trackers[id]
+    if not config then return end
+
+    if not self.activeTrackers[id] then
+        local frame = self.framePool[id]
+        local tracker = SnapshotFrame:New(id, frame)
+        self.framePool[id] = tracker.frame
+        self.activeTrackers[id] = tracker
+    end
+
+    self.activeTrackers[id]:ApplyConfig(config)
 end
 
-function AuraTracker:GetBars()
-    local db = self:GetDB()
-    return db and db.bars
+function AuraTracker:RebuildAllTrackers()
+    -- Hide all existing active trackers
+    for id, tracker in pairs(self.activeTrackers) do
+        tracker:Hide()
+    end
+    self.activeTrackers = {}
+
+    -- Re-initialize trackers from DB, reusing frames from pool
+    for id, config in pairs(self.db.profile.trackers) do
+        self:UpdateTracker(id)
+    end
 end
 
 -- ==========================================================
 -- EVENT HANDLERS
 -- ==========================================================
 
-function AuraTracker:OnTalentsChanged()
-    self:InvalidateBarStaticCache()
-    self:RebuildAllBars()
-end
-
-function AuraTracker:OnSpellUpdateCooldown()
-    UpdateEngine:UpdateGCDState()
-end
-
 function AuraTracker:OnCLEU(event, ...)
     SnapshotTracker:HandleCLEU(...)
-
-    if self._procToItems and next(self._procToItems) then
-        local _, subEvent, _, _, _, destGUID, _, _, spellId = ...
-        if destGUID == playerGUID
-        and (subEvent == "SPELL_AURA_APPLIED" or subEvent == "SPELL_AURA_REFRESH") then
-            local trackedItems = self._procToItems[spellId]
-            if trackedItems then
-                local now = GetTime()
-                for trackedItem in pairs(trackedItems) do
-                    trackedItem:OnProcDetected(spellId, now)
-                end
-            end
-        end
-    end
 end
 
 function AuraTracker:OnUnitAura(event, unit)
-    if unit == "player" or unit == "target" or unit == "focus" then
-        UpdateEngine:UpdateAurasForUnit(unit)
-    end
-    -- Route group member events so smart_group aura items stay current.
-    -- "player" is always a smart_group member; party/raid tokens cover grouped play.
-    if unit == "player" then
-        UpdateEngine:UpdateAurasForUnit("smart_group")
-    elseif unit:match("^party%d+$") or unit:match("^raid%d+$") then
-        UpdateEngine:UpdateAurasForUnit("smart_group")
-    end
-    -- Snapshots are only affected by player buffs and target debuffs;
-    -- skip the full bar traversal for unrelated units (e.g. focus, party).
     if unit == "player" or unit == "target" then
         SnapshotTracker:InvalidateCache()
-        UpdateEngine:UpdateSnapshotText()
     end
 end
 
 function AuraTracker:OnTargetChanged()
-    UpdateEngine:UpdateAurasForUnit("target")
     SnapshotTracker:InvalidateCache()
-    UpdateEngine:UpdateSnapshotText()
 end
 
 function AuraTracker:OnPlayerEnteringWorld()
-    playerGUID = UnitGUID("player")
     SnapshotTracker:ResetPlayerInfo()
-    self:InvalidateBarStaticCache()
-    self:RebuildAllBars()
+    self:RebuildAllTrackers()
 end
-
-function AuraTracker:OnSpellsChanged()
-    -- Opening the Spellbook fires SPELLS_CHANGED frequently; rebuilding all bars
-    -- recreates tracked items and resets active timers. Do a lightweight refresh.
-    UpdateEngine:UpdateAllCooldowns()
-    UpdateEngine:UpdateAllAuras()
-end
-
-function AuraTracker:OnDragStart()
-    DragDrop:OnDragStart()
-end
-
-function AuraTracker:OnDragEnd()
-    DragDrop:OnDragEnd()
-end
-
-function AuraTracker:OnTotemUpdate()
-    UpdateEngine:UpdateAllCooldowns()
-end
-
--- ==========================================================
--- UTILITY
--- ==========================================================
-
-function AuraTracker:Print(message)
-    print("|cff00bfffAuraTracker:|r " .. message)
-end
-
--- ==========================================================
--- EDIT MODE INTEGRATION
--- ==========================================================
 
 function AuraTracker:OnSlashCommand(input)
-    local cmd = strtrim(string_lower(input or ""))
-
-    if cmd == "editmode" or cmd == "move" then
-        LibEditmode:ToggleEditMode("AuraTracker")
-        if LibEditmode:IsEditModeActive("AuraTracker") then
-            self:Print("Edit mode |cFF00FF00enabled|r. Drag bars to reposition them. Type /at editmode again to exit.")
-        else
-            self:Print("Edit mode |cFFFF4444disabled|r.")
-        end
-        return
-    end
-
-    local SP = ns.AuraTracker.SettingsPanel
-    if SP then SP:Show() end
+    -- In 3.3.5, InterfaceOptionsFrame_OpenToCategory might not be enough to
+    -- jump to the specific sub-category if it's the first time opening.
+    InterfaceOptionsFrame_OpenToCategory("Aura Tracker")
+    InterfaceOptionsFrame_OpenToCategory("Aura Tracker")
 end

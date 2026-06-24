@@ -26,8 +26,8 @@ local GetInventoryItemLink = GetInventoryItemLink
 local INVSLOT_HEAD = INVSLOT_HEAD
 
 -- Minimap tracking API (C_Minimap in Classic, global in original WotLK)
-local GetNumTrackingTypes = C_Minimap and C_Minimap.GetNumTrackingTypes or GetNumTrackingTypes
-local GetTrackingInfo = C_Minimap and C_Minimap.GetTrackingInfo or GetTrackingInfo
+local GetNumTrackingTypes = (C_Minimap and C_Minimap.GetNumTrackingTypes) or _G.GetNumTrackingTypes
+local GetTrackingInfo = (C_Minimap and C_Minimap.GetTrackingInfo) or _G.GetTrackingInfo
 
 -- Data table aliases (populated by SnapshotData.lua, which loads first)
 local TARGET_UNIT                              = SnapshotTracker._TARGET_UNIT
@@ -40,8 +40,6 @@ local critModDamageBonusSetBonuses             = SnapshotTracker._critModDamageB
 local critModBuffs                             = SnapshotTracker._critModBuffs
 local critModMetaGems                          = SnapshotTracker._critModMetaGems
 local critChanceEnemyDebuffs                   = SnapshotTracker._critChanceEnemyDebuffs
-local critCategoryExclusiveWithMP              = SnapshotTracker._critCategoryExclusiveWithMP
-local critChanceEnemyMasterPoisonerDebuffs     = SnapshotTracker._critChanceEnemyMasterPoisonerDebuffs
 local damageModBuffs                           = SnapshotTracker._damageModBuffs
 local damageModDebuffs                         = SnapshotTracker._damageModDebuffs
 local damageModTalents                         = SnapshotTracker._damageModTalents
@@ -56,37 +54,13 @@ local SnapshotCalc = {}
 ns.AuraTracker.SnapshotCalc = SnapshotCalc
 
 -- ==========================================================
--- PRIVATE HELPERS
--- ==========================================================
-
---- Returns the Master Poisoner crit bonus (3%) from a specific caster
---- if their Mutilate buff is still within its window, nil otherwise.
-local function GetMasterPoisonerCritBonus(casterUnit, now, masterPoisoners)
-    if casterUnit then
-        local guid = UnitGUID(casterUnit)
-        if guid then
-            local expiry = masterPoisoners[guid]
-            if expiry then
-                if expiry > now then
-                    return 3
-                else
-                    masterPoisoners[guid] = nil
-                end
-            end
-        end
-    end
-    return nil
-end
-
--- ==========================================================
 -- CALCULATION: CRIT CHANCE
 -- ==========================================================
 
 --- Returns the player's effective spell crit chance including talents,
---- target debuffs, and Master Poisoner bonus.
+--- and target debuffs.
 --- @param playerClass  string  WoW class token (e.g. "MAGE")
---- @param masterPoisoners  table  [rogueGUID] = expirationTime (mutated only on expiry cleanup)
-function SnapshotCalc.CalcCritChance(playerClass, masterPoisoners)
+function SnapshotCalc.CalcCritChance(playerClass)
     local baseCrit = GetSpellCritChance(critSchools[playerClass] or 1)
     local now = GetTime()
 
@@ -114,8 +88,6 @@ function SnapshotCalc.CalcCritChance(playerClass, masterPoisoners)
 
     -- Enemy debuffs that increase crit chance
     local critDebuff = 0
-    local exclusiveCritSeen = false  -- true if HotC or ToW is present
-    local mpBonusValue = nil         -- MP bonus deferred until after the loop
     for i = 1, 40 do
         local name, _, _, count, _, _, _, source, _, _, spellId =
             UnitAura(TARGET_UNIT, i, "HARMFUL")
@@ -126,20 +98,7 @@ function SnapshotCalc.CalcCritChance(playerClass, masterPoisoners)
             local stacks = count or 0
             if stacks == 0 then stacks = 1 end
             critDebuff = critDebuff + debuffVal * stacks
-            if critCategoryExclusiveWithMP[spellId] then
-                exclusiveCritSeen = true
-            end
         end
-
-        if not mpBonusValue and critChanceEnemyMasterPoisonerDebuffs[spellId] then
-            mpBonusValue = GetMasterPoisonerCritBonus(source, now, masterPoisoners)
-        end
-    end
-    -- Master Poisoner shares the exclusive "spell-crit taken" category with
-    -- Heart of the Crusader and Totem of Wrath; only add it when neither of
-    -- those is already present, to avoid double-counting.
-    if mpBonusValue and not exclusiveCritSeen then
-        critDebuff = critDebuff + mpBonusValue
     end
 
     -- Set-bonus crit

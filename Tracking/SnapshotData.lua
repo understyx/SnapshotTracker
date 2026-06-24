@@ -22,15 +22,6 @@ end
 -- The unit used for target-dependent calculations (level, debuffs, health)
 local TARGET_UNIT = "target"
 
-local masterPoisonerWhitelist = {
-    [1329]  = true, -- Mutilate (Rank 1)
-    [34411] = true, -- Mutilate (Rank 2)
-    [34412] = true, -- Mutilate (Rank 3)
-    [34413] = true, -- Mutilate (Rank 4)
-    [48663] = true, -- Mutilate (Rank 5)
-    [48666] = true, -- Mutilate (Rank 6)
-}
-
 -- DoTs refreshed through talents/glyphs keep their original snapshot.
 -- Only a fresh SPELL_AURA_APPLIED recalculates damage/crit modifiers.
 -- A manual recast (detected via SPELL_CAST_SUCCESS) also recalculates.
@@ -143,21 +134,8 @@ local critChanceEnemyDebuffs = {
     [30708] = 3, -- Totem of Wrath
 }
 
--- Heart of the Crusader and Totem of Wrath share the same exclusive
--- "spell-crit taken" debuff category as Master Poisoner.  Only one of
--- them can be active on a target at a time, so Master Poisoner must not
--- be double-counted when either of these is already present.
-local critCategoryExclusiveWithMP = {
-    [21183] = true, -- Heart of the Crusader (Rank 1)
-    [54498] = true, -- Heart of the Crusader (Rank 2)
-    [54499] = true, -- Heart of the Crusader (Rank 3)
-    [30708] = true, -- Totem of Wrath
-}
-
-
 -- Export section 1 data tables
 SnapshotTracker._TARGET_UNIT = TARGET_UNIT
-SnapshotTracker._masterPoisonerWhitelist = masterPoisonerWhitelist
 SnapshotTracker._noRecalcOnRefresh = noRecalcOnRefresh
 SnapshotTracker._indirectApplicators = indirectApplicators
 SnapshotTracker._critSchools = critSchools
@@ -169,30 +147,7 @@ SnapshotTracker._critModDamageBonusSetBonuses = critModDamageBonusSetBonuses
 SnapshotTracker._critModBuffs = critModBuffs
 SnapshotTracker._critModMetaGems = critModMetaGems
 SnapshotTracker._critChanceEnemyDebuffs = critChanceEnemyDebuffs
-SnapshotTracker._critCategoryExclusiveWithMP = critCategoryExclusiveWithMP
 
-
--- Poison spell IDs for Master Poisoner detection
-local critChanceEnemyMasterPoisonerDebuffs = {
-    [2818]  = true, -- Deadly Poison I
-    [2819]  = true, -- Deadly Poison II
-    [11353] = true, -- Deadly Poison III
-    [11354] = true, -- Deadly Poison IV
-    [25349] = true, -- Deadly Poison V
-    [26968] = true, -- Deadly Poison VI
-    [27187] = true, -- Deadly Poison VII
-    [57969] = true, -- Deadly Poison VIII
-    [57970] = true, -- Deadly Poison IX
-    [13218] = true, -- Wound Poison I
-    [13222] = true, -- Wound Poison II
-    [13223] = true, -- Wound Poison III
-    [13224] = true, -- Wound Poison IV
-    [27189] = true, -- Wound Poison V
-    [57974] = true, -- Wound Poison VI
-    [57975] = true, -- Wound Poison VII
-    [3409]  = true, -- Crippling Poison
-    [5760]  = true, -- Mind-numbing Poison
-}
 
 -- Player buff damage modifiers (class-specific)
 local damageModBuffs = {
@@ -367,7 +322,6 @@ local function DelocalizeTracking(localized)
 end
 
 -- Export section 2 data tables
-SnapshotTracker._critChanceEnemyMasterPoisonerDebuffs = critChanceEnemyMasterPoisonerDebuffs
 SnapshotTracker._damageModBuffs = damageModBuffs
 SnapshotTracker._damageModDebuffs = damageModDebuffs
 SnapshotTracker._damageModTalents = damageModTalents
