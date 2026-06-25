@@ -51,6 +51,17 @@ local function GetOptions()
                         SnapshotTracker:UpdateTracker(id)
                     end,
                 },
+                showOnlyOnDiff = {
+                    name = "Only show if strength differs",
+                    type = "toggle",
+                    order = 1.1,
+                    desc = "Hide the frame when there is no difference (0%) or the spell is not active on the target.",
+                    get = function() return config.showOnlyOnDiff end,
+                    set = function(_, val)
+                        config.showOnlyOnDiff = val
+                        SnapshotTracker:UpdateTracker(id)
+                    end,
+                },
                 spellName = {
                     name = "Spell Name",
                     type = "input",

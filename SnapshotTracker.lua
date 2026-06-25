@@ -58,6 +58,7 @@ function SnapshotTracker:CreateNewTracker()
 
     db.trackers[id] = {
         enabled = true,
+        showOnlyOnDiff = false,
         spellName = "",
         globalName = "",
         size = 40,
