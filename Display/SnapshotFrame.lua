@@ -55,6 +55,7 @@ function SnapshotFrame:Update(testMode)
     if not self.config.enabled then return end
 
     if testMode then
+        self.frame:Show()
         self.frame.text:SetText("10.5%")
         return
     end
@@ -66,18 +67,30 @@ function SnapshotFrame:Update(testMode)
     local spellName = self.config.spellName
     if not spellName or spellName == "" then
         self.frame.text:SetText("")
+        if self.config.showOnlyOnDiff then
+            self.frame:Hide()
+        else
+            self.frame:Show()
+        end
         return
     end
 
     -- We track the snapshot on the target by default
     local diffText = SnapshotTracker:GetSnapshotDiff("target", spellName)
     if diffText then
+        self.frame:Show()
         self.frame.text:SetText(diffText)
     else
         if SnapshotTracker:HasSnapshot("target", spellName) then
             self.frame.text:SetText("0%")
         else
             self.frame.text:SetText("")
+        end
+
+        if self.config.showOnlyOnDiff then
+            self.frame:Hide()
+        else
+            self.frame:Show()
         end
     end
 end
